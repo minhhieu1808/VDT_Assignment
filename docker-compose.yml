@@ -1,0 +1,105 @@
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    # restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 2181:2181
+    networks:
+      vdt:
+        ipv4_address: 172.25.0.2
+
+  kafka1:
+    container_name: kafka1
+    image: confluentinc/cp-kafka:latest
+    # restart: always
+    depends_on:
+      - zookeeper
+    ports:
+      - 29092:29092
+      - 9092:9092
+    networks:
+      vdt: 
+        ipv4_address: 172.25.0.3
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.233.209:9092,PLAINTEXT_HOST://192.168.233.209:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+
+  kafka2:
+    container_name: kafka2
+    image: confluentinc/cp-kafka:latest
+    # restart: always
+    depends_on:
+      - zookeeper
+    ports:
+      - 29093:29093
+      - 9093:9093
+    networks:
+      vdt: 
+        ipv4_address: 172.25.0.4
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.233.209:9093,PLAINTEXT_HOST://192.168.233.209:29093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+
+  nifi:
+    container_name: nifi
+    image: apache/nifi:1.18.0
+    # restart: always
+    depends_on:
+      - zookeeper
+    environment:
+      NIFI_WEB_HTTP_PORT: 8443
+    ports:
+      - 8443:8443
+    volumes:
+      - $PWD/config:/hadoop
+    networks:
+      vdt:
+        ipv4_address: 172.25.0.5
+  namenode:
+    build: .
+    container_name: hadoop-master   
+    ports:
+      - 10000:10000 
+      - 8088:8088    # ui yarn
+      - 4040:4040   # ui spark 
+      - 9870:9870   # ui name node  
+    tty: true
+    networks:
+        vdt:
+          ipv4_address: 172.25.0.6
+
+  datanode1:
+    build: .
+    container_name: hadoop-slave1   
+    tty: true
+    networks:
+        vdt:
+          ipv4_address: 172.25.0.7
+
+  datanode2:
+    build: .
+    container_name: hadoop-slave2 
+    tty: true
+    networks:
+        vdt:
+          ipv4_address: 172.25.0.8
+networks:
+    vdt:
+        name: vdt
+        driver: bridge
+        ipam:
+          driver: default
+          config:
+            - subnet: 172.25.0.0/16
