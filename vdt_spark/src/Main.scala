@@ -6,7 +6,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .master("local")
+      .master("yarn")
       .appName("VdtAssigment")
       .getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
